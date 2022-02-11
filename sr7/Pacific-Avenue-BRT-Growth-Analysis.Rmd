@@ -1,0 +1,110 @@
+---
+title: "Pacific Avenue BRT Project"
+subtitle: "Growth Rate Analysis"
+date: | 
+  ![](images/psrc_logo.png){width=35%}
+
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 3
+
+header-includes:
+  - \usepackage{titling}
+  - \setlength{\droptitle}{20em} 
+  
+include-before:
+- '`\newpage{}`{=latex}'
+---
+
+```{r setup, include=FALSE}
+
+# Data Wrangling
+library(tidyverse)
+library(data.table)
+
+# Packages for Maps
+library(sf)
+library(leaflet)
+library(mapview)
+
+# Packages for Tables
+library(scales)
+library(kableExtra)
+
+source("volume-summary-comparison.R")
+
+```
+
+\listoftables
+\listoffigures
+\newpage
+
+# Introduction  
+This document is intended to document an approach for developing a set of traffic related growth forecasts for the Pacific Avenue BRT project. This memo is based on results from the latest Regional Transportation Plan analysis that is being conducted by the Puget Sound Regional Council and will be adopted in the Spring of 2022. Some key assumptions in this modeling analysis that can have an impact on traffic growth in the corridor include:
+
+* A Road Usage Charge (RUC) of \$0.05 per mile in the off-peak periods and \$0.10 per mile in the peak period are included in the modeling. The RUC is intended to support the financial strategy of the plan and applies to all facilities in the modeling network.  
+* Population and Employment estimates are based on the recently adopted VISION 2050 plan. As local agencies continuing work setting growth targets and proceeding comprehensive plan updates, location specific growth might change however the level of planned growth by Regional Geography and the county will remain consistent with the growth assumptions in this analysis.
+
+Transit is a critical part of the investments in the Regional Transportation Plan. Local and regional transit investments represent 70% of all system improvements in the Draft Regional Transportation Plan. A system of high capacity transit routes across the region provide access to opportunity for the region's growing population. Transit ridership is forecast to more than triple in the region by 2050 with the high capacity transit system carrying the load of this increase. In Piece County, ridership on Pierce Transit routes (not including Sound Transit service) is forecast to increase at a rate of approximately **`r round(agency.cagr*100,1)`%** per year between 2018 and 2050 - almost 3 times the rate of population growth in the county. Ridership on the Pacific Avenue BRT is a major part of that system in Pierce County with ridership forecast to increase at a rate of **`r round(brt.cagr*100,1)`%** per year over 2018 ridership on PT Route 1.
+ 
+
+\newpage
+# Equity Geographies in the Pacific Avenue BRT Corridor  
+Equity in this analysis is defined as people of color (using Census Race & Ethnicity definitions, all people not identifying as White, Not Hispanic or LatinX) and people of lower incomes (using Census Poverty definitions as anyone under 200% of the Federal Poverty definition). All population data by race and income was downloaded from the US Census Bureau's API for the 5-year American Community Survey (ACS) dataset by census tracts. More detail on the API and available census products available from the api can be found at <https://www.census.gov/data/developers/data-sets/acs-5year.html>.  
+
+The following census tables were used to define the Equity Geography:  
+
+* Population by Race and Ethnicity: **Table B03002**.  
+* Population by Ratio of Poverty Level: **Table C17002**.  
+
+Census tracts were flagged as either being in or out of the equity area. For purposes of this analysis, a comparison of the percentage of total population by race for each census tract was compared to the regional average for that census tract. If the percent people of color was above the regional average for that tract, then the tract was flagged as an equity area. The same approach was then applied to the poverty data once again comparing the percentage of people of lower incomes in the census tract compared to the regional average for that tract.  
+
+Areas with higher shares of people of color and people of lower incomes are shown in Figure 1. As shown in the maps, the Pacific Avenue BRT corridor serves many areas with higher than average shares of both people of color and people of lower incomes. Of the `r num.pac.ave.tracts` census tracts that are within 1/2 mile of the Pacific Avenue BRT Corridor, `r num.pac.ave.tracts.poc` have higher shares of people of color and `r num.pac.ave.tracts.pov` have higher shares of people of lower incomes than the region as a whole.
+
+``` {r echo=FALSE, out.width = "50%", fig.cap = "Pacific Avenue Corridor Equity Geographies", fig.show = 'hold'}
+knitr::include_graphics(path=c("images/corridor_tract_poc.png","images/corridor_tract_pov.png"))
+```
+
+\newpage
+# People & Job Growth in the Pacific Avenue Corridor  
+Population and job growth are key drivers of traffic volume growth in regional travel demand models. To help understand the magnitude of traffic growth, sometimes it is useful to look at the underlying population and job growth in the vicinity of the corridor. For this comparison, we have looked at any Traffic Analysis Zone that intersect a 1/2 mile buffer around the Pacific Avenue BRT corridor. For purposes of this analysis, we considered any zone that intersected the buffer in this calculation. The map of the zones that are within 1/2 mile of the Pacific Avenue BRT corridor are shown in Figure 2.
+
+``` {r echo=FALSE, out.width = "100%", fig.cap = "Traffic Analysis Zones within a 1/2 Mile Buffer of Pacific Avenue BRT", fig.show = 'hold'}
+knitr::include_graphics(path=c("images/corridor_taz.png"))
+```
+
+Population in the zones within 1/2 mile of the Pacific Avenue BRT Corridor are forecast to grow at approximately **`r round(corridor.pop.cagr*100,1)`%** per year between 2018 and 2050 and jobs are forecast to grow at a rate of **`r round(corridor.emp.cagr*100,1)`%** per year.
+
+\newpage
+# Traffic Volume Growth in the Pacific Avenue Corridor  
+Regional travel demand models are good at forecasting regional flows but caution should always be used when looking at detailed link specific outcomes. Most traffic growth rate analysis from regional travel demand models rely upon the use of screenlines to smooth out the uncertainties in link level outputs. Another common approach is to weight the traffic volumes by length in order to smooth out any irregularities that occur due to locations of centroid connectors.
+
+For this analysis, we looked at a variety of traffic growth rates using vehicle miles traveled between 2018 and 2050 from the latest Regional Transportation Plan modeling that was performed in the Fall of 2021. This analysis includes the latest versions of population and employment forecasts from VISION 2050 and the latest regional assumptions from the Regional Capacity Project list. We then looked at three different ways to calculate the traffic growth rate:
+
+1. Pacific Avenue
+2. Pacific Avenue, Yakima Avenue and Portland Avenue
+3. Pacific Avenue, Yakima Avenue, Portland Avenue and Canyon Road
+4. I-5 only (for comparison purposes only)
+5. East/West Facilities south of 121st Street
+6. East/West Facilities between 121st Street and 38th Street 
+
+The growth rates from the three approaches on Pacific Avenue ranged from **`r round(sr7.corridors.cagr*100,1)`%** on Pacific Avenue to a high of **`r round(corridors.cagr*100,1)`%** when the screenline includes Canyon Road with a rate of **`r round(corridors.no.cany.cagr*100,1)`%** when Canyon Road is not included in the screenline. Canyon Road has a planned extension in the Regional Transportation Plan and is also more than 1/2 mile away from the Pacific Avenue Corridor. For context, I-5, which has a planned HOV extension and various interchange improvements planned in southern Pierce County is forecast to have an annual growth rate of approximately **`r round(i5.corridors.cagr*100,1)`%** .
+
+The east-west facilities both north and south of 121st street have slightly higher rates of growth than the north-south facilities with rates south of 121st street of **`r round(ew.south.cagr*100,1)`%** and a rate of **`r round(ew.north.cagr*100,1)`%** between 121st and 38th.
+
+``` {r echo=FALSE, out.width = "33%", fig.cap = "Pacific Avenue Corridor Screenline Options", fig.show = 'hold'}
+knitr::include_graphics(path=c("images/pac_avenue_screenline.png","images/no_canyon_screenline.png","images/canyon_screenline.png"))
+```
+
+\newpage
+
+
+# Summary Recommendation  
+Based upon a review of the population, job, transit and traffic volume growth from the latest Regional Transportation Plan analysis, it appears that a growth rate at or near **1.0% per year** would be a reasonable input for the Pacific Avenue Corridor. Traffic growth on the facilities nearest to Pacific Avenue show growth at or near 0.9% and the population and employment growth is at or above this 1% rate of change. This rate of growth appears consistent in the regional modeling analysis which points to a likely set of "convergence" at or around this rate of growth that balances traffic across the facilities in the area.
+
+The growth rate for the east-west facilities appear slightly greater than the north-south screenline however an approximate **1%** growth rate still appears reasonable for these movements as well.
+
+``` {r echo=FALSE, out.width = "100%", fig.show = 'hold'}
+growth.summary.table
+```
