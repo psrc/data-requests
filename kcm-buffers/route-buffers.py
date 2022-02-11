@@ -9,16 +9,21 @@ import geopandas as gp
 from simpledbf import Dbf5
 
 working_directory = os.getcwd()
-
 years = ['2018','2030','2040', '2050']
-
-state_plane = 'epsg:2926'
 
 # File
 route_buffers = os.path.join(working_directory,'data','buffers','frequent-buffers.shp')
 route_dbf = os.path.join(working_directory,'data','buffers','frequent-buffers.dbf')
 
 parcels_file = os.path.join(working_directory,'data','parcels','parcel-points.shp')
+mic_file = os.path.join(working_directory,'data','shapefiles','mic.shp')
+rgc_file = os.path.join(working_directory,'data','shapefiles','rgc.shp')
+
+print('Loading Route Buffer File and Dissolving into one polygon')
+frequent_routes = gp.GeoDataFrame.from_file(route_buffers)
+frequent_routes['All_Frequent'] = 1
+frequent_routes = frequent_routes.dissolve(by='All_Frequent')
+frequent_routes['RTNAME'] = "All Frequent Routes"
 
 def create_df_from_h5(h5_file, h5_table, h5_variables):
 
@@ -107,7 +112,7 @@ for working_route in buffers:
    
     # Spatial Join the Current Buffer with the Parcel Layer
     final_cols = ['RTNAME','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050']
-    merged = gp.sjoin(route_buffer, parcels_layer, how = "inner", op='intersects')
+    merged = gp.sjoin(parcels_layer, route_buffer, how = "inner", op='intersects')
     merged = merged.loc[:,final_cols]
     
     # Group by RTNAME for a Total Summary for the Route Buffer
@@ -122,6 +127,15 @@ for working_route in buffers:
         final_df = final_df.append(consolidated_df)
     
     current_count = current_count + 1
+    
+print('Working on Buffers for All Frequent Routes combined')
+final_cols = ['RTNAME','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050']
+merged = gp.sjoin(parcels_layer, frequent_routes, how = "inner", op='intersects')
+merged = merged.loc[:,final_cols]
+consolidated_df = merged.groupby('RTNAME').sum()
+consolidated_df = consolidated_df.reset_index()
+consolidated_df.fillna(0,inplace=True)
+final_df = final_df.append(consolidated_df)
 
 print('Figure out King County Shares by Year')
 king_parcels = parcels_layer[parcels_layer['county']==33]
@@ -145,6 +159,86 @@ final_df['Job_Share_2018'] = final_df['jobs_2018']/job_2018
 final_df['Job_Share_2030'] = final_df['jobs_2030']/job_2030
 final_df['Job_Share_2040'] = final_df['jobs_2040']/job_2040
 final_df['Job_Share_2050'] = final_df['jobs_2050']/job_2050
+
+print('Working on Manufacturing and Industrial Centers')
+final_cols = ['mic','geometry']
+mic = gp.GeoDataFrame.from_file(mic_file)
+mic = mic[final_cols]
+mic_parcels = gp.sjoin(king_parcels, mic, how = "inner", op='intersects')
+final_cols = ['parcelid','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry', 'mic']
+mic_parcels = mic_parcels[final_cols]
+
+final_cols = ['mic','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry']
+merged = gp.sjoin(mic_parcels, frequent_routes, how = "inner", op='intersects')
+merged = merged.loc[:,final_cols]
+merged['RTNAME'] = "Manufacturing and Industrial Centers"
+consolidated_df = merged.groupby('RTNAME').sum()
+consolidated_df = consolidated_df.reset_index()
+consolidated_df.fillna(0,inplace=True)
+
+pop_2018 = sum(mic_parcels['population_2018'])
+pop_2030 = sum(mic_parcels['population_2030'])
+pop_2040 = sum(mic_parcels['population_2040'])
+pop_2050 = sum(mic_parcels['population_2050'])
+
+job_2018 = sum(mic_parcels['jobs_2018'])
+job_2030 = sum(mic_parcels['jobs_2030'])
+job_2040 = sum(mic_parcels['jobs_2040'])
+job_2050 = sum(mic_parcels['jobs_2050'])
+
+print('Adding Share of MIC Total in each buffer for each Year')
+consolidated_df['Population_Share_2018'] = consolidated_df['population_2018']/pop_2018
+consolidated_df['Population_Share_2030'] = consolidated_df['population_2030']/pop_2030
+consolidated_df['Population_Share_2040'] = consolidated_df['population_2040']/pop_2040
+consolidated_df['Population_Share_2050'] = consolidated_df['population_2050']/pop_2050
+
+consolidated_df['Job_Share_2018'] = consolidated_df['jobs_2018']/job_2018
+consolidated_df['Job_Share_2030'] = consolidated_df['jobs_2030']/job_2030
+consolidated_df['Job_Share_2040'] = consolidated_df['jobs_2040']/job_2040
+consolidated_df['Job_Share_2050'] = consolidated_df['jobs_2050']/job_2050
+
+print('Adding MIC Totals to Summary File')
+final_df = final_df.append(consolidated_df)
+
+print('Working on Regional Growth Centers')
+final_cols = ['name','geometry']
+rgc = gp.GeoDataFrame.from_file(rgc_file)
+rgc = rgc[final_cols]
+rgc_parcels = gp.sjoin(king_parcels, rgc, how = "inner", op='intersects')
+final_cols = ['parcelid','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry', 'name']
+rgc_parcels = rgc_parcels[final_cols]
+
+final_cols = ['name','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry']
+merged = gp.sjoin(rgc_parcels, frequent_routes, how = "inner", op='intersects')
+merged = merged.loc[:,final_cols]
+merged['RTNAME'] = "Reegional Growth Centers"
+consolidated_df = merged.groupby('RTNAME').sum()
+consolidated_df = consolidated_df.reset_index()
+consolidated_df.fillna(0,inplace=True)
+
+pop_2018 = sum(rgc_parcels['population_2018'])
+pop_2030 = sum(rgc_parcels['population_2030'])
+pop_2040 = sum(rgc_parcels['population_2040'])
+pop_2050 = sum(rgc_parcels['population_2050'])
+
+job_2018 = sum(rgc_parcels['jobs_2018'])
+job_2030 = sum(rgc_parcels['jobs_2030'])
+job_2040 = sum(rgc_parcels['jobs_2040'])
+job_2050 = sum(rgc_parcels['jobs_2050'])
+
+print('Adding Share of RGC Total in each buffer for each Year')
+consolidated_df['Population_Share_2018'] = consolidated_df['population_2018']/pop_2018
+consolidated_df['Population_Share_2030'] = consolidated_df['population_2030']/pop_2030
+consolidated_df['Population_Share_2040'] = consolidated_df['population_2040']/pop_2040
+consolidated_df['Population_Share_2050'] = consolidated_df['population_2050']/pop_2050
+
+consolidated_df['Job_Share_2018'] = consolidated_df['jobs_2018']/job_2018
+consolidated_df['Job_Share_2030'] = consolidated_df['jobs_2030']/job_2030
+consolidated_df['Job_Share_2040'] = consolidated_df['jobs_2040']/job_2040
+consolidated_df['Job_Share_2050'] = consolidated_df['jobs_2050']/job_2050
+
+print('Adding RGC Totals to Summary File')
+final_df = final_df.append(consolidated_df)
 
 print('Output final file')
 final_df.to_csv(working_directory + '\\pop_jobs_frequent_transit.csv',index=False)
