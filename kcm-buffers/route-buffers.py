@@ -18,6 +18,7 @@ route_dbf = os.path.join(working_directory,'data','buffers','frequent-buffers.db
 parcels_file = os.path.join(working_directory,'data','parcels','parcel-points.shp')
 mic_file = os.path.join(working_directory,'data','shapefiles','mic.shp')
 rgc_file = os.path.join(working_directory,'data','shapefiles','rgc.shp')
+cwc_file = os.path.join(working_directory,'data','shapefiles','countywide_centers.shp')
 
 print('Loading Route Buffer File and Dissolving into one polygon')
 frequent_routes = gp.GeoDataFrame.from_file(route_buffers)
@@ -211,7 +212,7 @@ rgc_parcels = rgc_parcels[final_cols]
 final_cols = ['name','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry']
 merged = gp.sjoin(rgc_parcels, frequent_routes, how = "inner", op='intersects')
 merged = merged.loc[:,final_cols]
-merged['RTNAME'] = "Reegional Growth Centers"
+merged['RTNAME'] = "Regional Growth Centers"
 consolidated_df = merged.groupby('RTNAME').sum()
 consolidated_df = consolidated_df.reset_index()
 consolidated_df.fillna(0,inplace=True)
@@ -238,6 +239,46 @@ consolidated_df['Job_Share_2040'] = consolidated_df['jobs_2040']/job_2040
 consolidated_df['Job_Share_2050'] = consolidated_df['jobs_2050']/job_2050
 
 print('Adding RGC Totals to Summary File')
+final_df = final_df.append(consolidated_df)
+
+print('Working on Countywide Centers')
+final_cols = ['CWC','geometry']
+cwc = gp.GeoDataFrame.from_file(cwc_file)
+cwc = cwc[final_cols]
+cwc_parcels = gp.sjoin(king_parcels, cwc, how = "inner", op='intersects')
+final_cols = ['parcelid','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry', 'CWC']
+cwc_parcels = cwc_parcels[final_cols]
+
+final_cols = ['CWC','population_2018','population_2030','population_2040','population_2050','jobs_2018','jobs_2030','jobs_2040','jobs_2050', 'geometry']
+merged = gp.sjoin(cwc_parcels, frequent_routes, how = "inner", op='intersects')
+merged = merged.loc[:,final_cols]
+merged['RTNAME'] = "Countywide Centers"
+consolidated_df = merged.groupby('RTNAME').sum()
+consolidated_df = consolidated_df.reset_index()
+consolidated_df.fillna(0,inplace=True)
+
+pop_2018 = sum(cwc_parcels['population_2018'])
+pop_2030 = sum(cwc_parcels['population_2030'])
+pop_2040 = sum(cwc_parcels['population_2040'])
+pop_2050 = sum(cwc_parcels['population_2050'])
+
+job_2018 = sum(cwc_parcels['jobs_2018'])
+job_2030 = sum(cwc_parcels['jobs_2030'])
+job_2040 = sum(cwc_parcels['jobs_2040'])
+job_2050 = sum(cwc_parcels['jobs_2050'])
+
+print('Adding Share of CWC Total in each buffer for each Year')
+consolidated_df['Population_Share_2018'] = consolidated_df['population_2018']/pop_2018
+consolidated_df['Population_Share_2030'] = consolidated_df['population_2030']/pop_2030
+consolidated_df['Population_Share_2040'] = consolidated_df['population_2040']/pop_2040
+consolidated_df['Population_Share_2050'] = consolidated_df['population_2050']/pop_2050
+
+consolidated_df['Job_Share_2018'] = consolidated_df['jobs_2018']/job_2018
+consolidated_df['Job_Share_2030'] = consolidated_df['jobs_2030']/job_2030
+consolidated_df['Job_Share_2040'] = consolidated_df['jobs_2040']/job_2040
+consolidated_df['Job_Share_2050'] = consolidated_df['jobs_2050']/job_2050
+
+print('Adding CWC Totals to Summary File')
 final_df = final_df.append(consolidated_df)
 
 print('Output final file')
