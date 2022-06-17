@@ -178,3 +178,6 @@ vignettes/*.pdf
 */data/
 */images/
 *.pdf
+*.Rproj
+*.png
+*.html

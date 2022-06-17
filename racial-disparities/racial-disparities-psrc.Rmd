@@ -1,0 +1,410 @@
+---
+title: "Racial Disparities in the Central Puget Sound Region"
+output: 
+  ioslides_presentation: 
+    widescreen: yes
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+
+# Packages for Data Cleaning/Processing
+library(tidyverse)
+library(data.table)
+
+# Packages for Spatial Data
+library(sf)
+
+# Packages for Chart Creation
+library(ggplot2)
+library(scales)
+library(plotly)
+
+# Packages for Map Creation
+library(leaflet)
+
+setwd("C:/Users/chelmann/OneDrive - Puget Sound Regional Council/coding/racial-disparities-analysis")
+yr <- 2020
+pums.source <-paste0("Source: ", yr-4, "-", yr, " ACS Public Use Microdata Sample (PUMS) Data")
+essential.source <- paste0("https://www.cdc.gov/vaccines/covid-19/categories-essential-workers.html")
+psrc.logo <- "images/psrc_logo.png"
+
+psrc.colors <- list("Black or African American" = "#AD5CAB",
+                    "American Indian or Alaskan Native" = "#C388C2",
+                    "Asian" = "#E3C9E3",
+                    "Native Hawaiian and Other Pacific Islander" = "#F4835E",
+                    "Some Other Race" = "#F7A489",
+                    "Two or More Races" = "#FBD6C9",
+                    "Non-Hispanic White" = "#999999",
+                    "Hispanic or LatinX" = "#C0E095",
+                    "Multiple Races" = "#E2F1CF")
+
+# Spatial Data Inputs
+spn <- 2285
+wgs84 <- 4326
+
+# Functions
+create_bar_chart <- function(d=equity.data, w.y="Share", c, v, f=100, dec=0, suff="%", lbl=scales::percent, pre="") {
+  
+  t <- d %>% filter(Concept==c & Variable==v) %>% select(Race,.data[[w.y]])
+  
+  g <-  ggplotly(ggplot(data = t,
+                        aes(x = reorder(Race,get(eval(w.y)),decreasing=TRUE),
+                            y = get(eval(w.y)), 
+                            fill = Race,
+                            text = paste0("<b>", Race, ": </b>", pre, prettyNum(round(get(eval(w.y))*f, dec), big.mark = ","), suff,"<br>"))) +
+                        geom_col(color = "black", alpha = 1.0, position = "dodge") +
+                   labs(x = NULL, y = NULL) +
+                   scale_y_continuous(labels = lbl) +
+                   scale_fill_manual(values= psrc.colors) +
+                   theme(plot.title = element_text(size = 10, face = 'bold'),
+                         axis.text.x = element_blank(),
+                         axis.ticks.x = element_blank(),
+                         axis.line = element_blank(),
+                         panel.background = element_blank(),
+                         panel.grid.major.y = element_line(colour="#BBBDC0",size = 0.25),
+                         panel.grid.minor.y = element_line(colour="#BBBDC0",size = 0.25),
+                         panel.grid.major.x = element_blank(),
+                         panel.grid.minor.x = element_blank(),
+                         text = element_text(family = "Segoe UI"),
+                         legend.position = "bottom",
+                         legend.title = element_blank()),
+                tooltip = c("text")) %>% layout(legend = list(orientation = "h", xanchor = "center", x = 0.5, y = 0))
+  
+  return(g) 
+  
+  
+}
+
+# Equity Data
+equity.data <- fread(paste0("data/pums_equity_data_",yr,"_5yr.csv"))
+
+# Educational Attainment
+pre.k.chart <- create_bar_chart(c="Kindergarten Readiness", v="Nursery school, preschool")
+bachelors.chart <- create_bar_chart(c="Educational Attainment", v="At least a Bachelors Degree")
+advanced.degree.chart <- create_bar_chart(c="Educational Attainment", v="Masters, Professional or PhD Degree")
+broadband.chart <- create_bar_chart(c="High Speed Internet Acces per Household", v="No")
+
+# Employment
+unemployment.chart <- create_bar_chart(c="Employment Status", v="Unemployed", dec=1)
+median.income.chart <- create_bar_chart(c="Median Household Income", w.y = "Estimate", v="Median Household Income", dec=0, f=1, suff="", lbl=scales::dollar, pre="$")
+essential.chart <- create_bar_chart(c="Essential Workers", v="Essential Worker")
+
+# Home Ownership
+ownership.chart <- create_bar_chart(c="Home Ownership", v="Own")
+median.value.chart <- create_bar_chart(c="Median Home Value", w.y = "Estimate", v="Median Home Value", dec=0, f=1, suff="", lbl=scales::dollar, pre="$")
+single.family.chart <- create_bar_chart(c="Home Type", v="Single-Family")
+housing.burden.chart <- create_bar_chart(c="Share of Income Spent on Housing", v="Share of Income Spent on Housing")
+
+# Mode to Work
+vehicles.chart <- create_bar_chart(c="Vehicles per Household", v="No vehicles")
+transit.chart <- create_bar_chart(c="Mode to Work", v="Transit")
+wfh.chart <- create_bar_chart(c="Mode to Work", v="Worked from Home")
+tt.chart <- create_bar_chart(c="Average Travel Time to Work", v="Average Travel Time to Work", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+
+# Health Outcome
+insurance.chart <- create_bar_chart(c="Health Insurance Coverage", v="No health insurance coverage")
+disability.chart <- create_bar_chart(c="Disability Status", v="With a disability")
+life.expectancy.chart <- create_bar_chart(c="Life Expectancy", v="Rate", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+infant.mortality.chart <- create_bar_chart(c="Infant Mortality", v="Infant Mortality Rate per 1000 Births 2015 to 2019", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+
+```
+
+## Planning for Equity at PSRC{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Planning for Equity at PSRC</slideheadstyle>
+</div>
+
+The central Puget Sound region has a long history of racism that continues to cause enormous harm. Generations of discrimination, disinvestment, and inequitable opportunities have helped lay the groundwork for a region where people of color and white residents too often have completely different experiences. As a planning agency, PSRC makes decisions that shape transportation, land use, and the built environment. The agency has a responsibility to dismantle systems of inequity and re-imagine a region where race can no longer predict life outcomes.
+
+PSRC is developing a Regional Equity Strategy to improve outcomes for marginalized communities and how the agency operates internally. The agency will lead with race, which has proven to be an effective method for not only increasing equitable outcomes for people of color but developing a framework, tools, and resources that can remove barriers for other marginalized groups. The Regional Equity Strategy will provide guidance to help members work in a coordinated manner towards the region's goal of providing an exceptional quality of life and opportunity for all. It will also provide guidance and training for staff to ensure the agency effectively uses its roles to advance racial equity.  
+
+The work plan is anticipated to be finalized in spring 2021, for the next budget and work program. Initial phases of the strategy will be finalized in 2022. This work will be ongoing and the current draft timeline is: 
+
+![](images/equity-strategy-timeline.jpg){width=50%}
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+
+## Educational Opportunities {data-background=images/slide-uw-equity_0.png data-background-size=cover}
+
+<div style="position:absolute; top:50%; left:25%;">
+<transitionstyle>Educational Attainment</transitionstyle>
+</div>
+
+
+## Pre-School{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Pre-School Enrollment by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r pre.k.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Broadband{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Access to Broadband by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r broadband.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Bachelors Degree{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>At least a Bachelor's Degree by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r bachelors.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Advanced Degree{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Masters, PhD or Terminal Degree by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r advanced.degree.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Employment Opportunities {data-background=images/rentonboeing3.jpg data-background-size=cover}
+
+<div style="position:absolute; top:50%; left:25%;">
+<transitionstyle>Employment</transitionstyle>
+</div>
+
+## Unemployment{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Unemployment Rate by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r unemployment.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## MedianIncome{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Median Household Income by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r median.income.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Essential Workers{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Essential Workers by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r essential.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r essential.source`</sourcestyle></div>
+
+
+## Home Ownership {data-background=images/housing.jpg data-background-size=cover}
+
+<div style="position:absolute; top:50%; left:25%;">
+<transitionstyle>Home Ownership</transitionstyle>
+</div>
+
+## Ownership{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Home Ownership by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r ownership.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Value{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Home Value by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r median.value.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Single Family{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Single Family Ownership by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r single.family.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Cost Burden{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>% of Income Spent on Housing by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r housing.burden.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Mode and Travel {data-background=images/transportation.jpg data-background-size=cover}
+
+<div style="position:absolute; top:50%; left:25%;">
+<transitionstyle>Mode and Time to Work</transitionstyle>
+</div>
+
+## Vehicles{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Zero Car Households by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r vehicles.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Transit{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Transit Mode to Work by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r transit.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Travel Time{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Travel Time to Work by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r tt.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Work from Home{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Work form Home by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r wfh.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Health {data-background=images/637078524043670000.jfif data-background-size=cover}
+
+<div style="position:absolute; top:50%; left:25%;">
+<transitionstyle>Health Outcomes</transitionstyle>
+</div>
+
+## Insurance{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>No Health Insurance by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r insurance.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Life Expectancy{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Life Expectancy by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r life.expectancy.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Infant Mortality{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Infant Mortality Rate per 1000 Births by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r infant.mortality.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Disability{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>People with a Disability by Race</slideheadstyle>
+</div>
+
+<div style="float: left; width: 100%;">
+`r disability.chart`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+<div style="position:absolute; bottom:4.0%; right:10%;"><sourcestyle>`r pums.source`</sourcestyle></div>
+
+
+## Questions {data-background=images/rhs-slide-2400x800.jpg data-background-size=cover}
+
+<div style="position:absolute; top:85%; left:5%;">
+<transitionstyle>Questions? chelmann@psrc.org</transitionstyle>
+</div>

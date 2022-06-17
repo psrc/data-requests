@@ -1,0 +1,503 @@
+---
+title: "Racial Disparities in the Central Puget Sound Region"
+author: "Meeting Title"
+date: "June 2022"
+output: 
+  powerpoint_presentation:
+    reference_doc: trends-psrc-template.pptx
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+
+library(knitr)
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+library(scales)
+library(plotly)
+
+setwd("C:/Users/chelmann/OneDrive - Puget Sound Regional Council/coding/racial-disparities-analysis")
+yr <- 2020
+pums.source <-paste0("Source: ", yr-4, "-", yr, " ACS Public Use Microdata Sample (PUMS) Data")
+essential.source <- paste0("https://www.cdc.gov/vaccines/covid-19/categories-essential-workers.html")
+psrc.logo <- "images/psrc_logo.png"
+
+psrc.colors <- list("Black or African American" = "#630460",
+                    "American Indian or Alaskan Native" = "#C388C2",
+                    "Asian" = "#9f3913",
+                    "Native Hawaiian and Other Pacific Islander" = "#F7A489",
+                    "Some Other Race" = "#588527",
+                    "Two or More Races" = "#C0E095",
+                    "Non-Hispanic White" = "#999999",
+                    "Hispanic or LatinX" = "#00716c",
+                    "Multiple Races" = "#73CFCB")
+
+
+# Functions
+create_bar_chart <- function(d=equity.data, w.y="Share", c, v, f=100, dec=0, suff="%", lbl=scales::percent, pre="") {
+  
+  t <- d %>% filter(Concept==c & Variable==v) %>% select(Race,.data[[w.y]])
+  
+  g <-  ggplot(data = t,
+                        aes(x = reorder(Race,get(eval(w.y)),decreasing=TRUE),
+                            y = get(eval(w.y)), 
+                            fill = Race)) +
+                        geom_col(color = "black", alpha = 1.0, position = "dodge") +
+    geom_text(aes(label=paste0(pre, format(round(get(eval(w.y))*f,dec), nsmall=0, big.mark=","),suff)), position=position_dodge(width=0.9), vjust=1.5, size = 8, colour = "white") +
+                   labs(x = NULL, y = NULL) +
+                   scale_y_continuous(labels = lbl) +
+                   scale_fill_manual(values= psrc.colors) +
+                   theme(plot.title = element_text(size = 10, face = 'bold'),
+                         axis.text.x = element_blank(),
+                         axis.ticks.x = element_blank(),
+                         axis.text.y = element_text(size = 18),
+                         axis.line = element_blank(),
+                         panel.background = element_blank(),
+                         panel.grid.major.y = element_line(colour="#BBBDC0",size = 0.25),
+                         panel.grid.minor.y = element_line(colour="#BBBDC0",size = 0.25),
+                         panel.grid.major.x = element_blank(),
+                         panel.grid.minor.x = element_blank(),
+                         legend.position = "bottom",
+                         legend.text = element_text(size=18),
+                         legend.title = element_blank())
+  
+  return(g) 
+  
+  
+}
+
+# Equity Data
+equity.data <- fread(paste0("data/pums_equity_data_",yr,"_5yr.csv")) %>% mutate(Estimate = replace_na(Estimate, 0))
+
+# Educational Attainment
+pre.k.chart <- create_bar_chart(c="Kindergarten Readiness", v="Nursery school, preschool")
+bachelors.chart <- create_bar_chart(c="Educational Attainment", v="At least a Bachelors Degree")
+advanced.degree.chart <- create_bar_chart(c="Educational Attainment", v="Masters, Professional or PhD Degree")
+broadband.chart <- create_bar_chart(c="High Speed Internet Acces per Household", v="No")
+
+# Employment
+unemployment.chart <- create_bar_chart(c="Employment Status", v="Unemployed", dec=1)
+median.income.chart <- create_bar_chart(c="Median Household Income", w.y = "Estimate", v="Median Household Income", dec=0, f=1, suff="", lbl=scales::dollar, pre="$")
+essential.chart <- create_bar_chart(c="Essential Workers", v="Essential Worker")
+
+# Home Ownership
+ownership.chart <- create_bar_chart(c="Home Ownership", v="Own")
+median.value.chart <- create_bar_chart(c="Median Home Value", w.y = "Estimate", v="Median Home Value", dec=0, f=1, suff="", lbl=scales::dollar, pre="$")
+single.family.chart <- create_bar_chart(c="Home Type", v="Single-Family")
+housing.burden.chart <- create_bar_chart(c="Share of Income Spent on Housing", v="Share of Income Spent on Housing")
+
+# Mode to Work
+vehicles.chart <- create_bar_chart(c="Vehicles per Household", v="No vehicles")
+transit.chart <- create_bar_chart(c="Mode to Work", v="Transit")
+wfh.chart <- create_bar_chart(c="Mode to Work", v="Worked from Home")
+tt.chart <- create_bar_chart(c="Average Travel Time to Work", v="Average Travel Time to Work", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+
+# Health Outcome
+insurance.chart <- create_bar_chart(c="Health Insurance Coverage", v="No health insurance coverage")
+disability.chart <- create_bar_chart(c="Disability Status", v="With a disability")
+life.expectancy.chart <- create_bar_chart(c="Life Expectancy", v="Rate", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+infant.mortality.chart <- create_bar_chart(c="Infant Mortality", v="Infant Mortality Rate per 1000 Births 2015 to 2019", w.y = "Estimate", dec=1, f=1, suff="", lbl=scales::comma, pre="")
+
+```
+## Planning for Equity at PSRC
+
+The central Puget Sound region has a long history of racism that continues to cause enormous harm. Generations of discrimination, disinvestment, and inequitable opportunities have helped lay the groundwork for a region where people of color and white residents too often have completely different experiences. As a planning agency, PSRC makes decisions that shape transportation, land use, and the built environment. The agency has a responsibility to dismantle systems of inequity and re-imagine a region where race can no longer predict life outcomes.
+
+PSRC is developing a Regional Equity Strategy to improve outcomes for marginalized communities and how the agency operates internally. The agency will lead with race, which has proven to be an effective method for not only increasing equitable outcomes for people of color but developing a framework, tools, and resources that can remove barriers for other marginalized groups. The Regional Equity Strategy will provide guidance to help members work in a coordinated manner towards the region's goal of providing an exceptional quality of life and opportunity for all. It will also provide guidance and training for staff to ensure the agency effectively uses its roles to advance racial equity.  
+
+The work plan is anticipated to be finalized in spring 2021, for the next budget and work program. Initial phases of the strategy will be finalized in 2022. This work will be ongoing and the current draft timeline is: 
+
+
+# Educational Opportunities
+
+## Pre-School Enrollment 
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+pre.k.chart
+```
+
+:::
+::::::::::::::
+
+
+## Access to Broadband Internet at Home
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+broadband.chart
+```
+
+:::
+::::::::::::::
+
+
+## People with at Least a Bachelor's Degree
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+bachelors.chart
+```
+
+:::
+::::::::::::::
+
+
+## People with an Advanced Degree
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+advanced.degree.chart
+```
+
+:::
+::::::::::::::
+
+# Employment Opportunities
+
+## Unemployment Rate
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+unemployment.chart
+```
+
+:::
+::::::::::::::
+
+
+## Median Income
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+median.income.chart
+```
+
+:::
+::::::::::::::
+
+## Essential Workers
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+essential.chart
+```
+
+:::
+::::::::::::::
+
+
+# Home Ownership
+
+
+## Home Ownership Rates
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+ownership.chart
+```
+
+:::
+::::::::::::::
+
+
+## Median Home Value
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+median.value.chart
+```
+
+:::
+::::::::::::::
+
+
+## Single Family Households
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+single.family.chart
+```
+
+:::
+::::::::::::::
+
+
+## % of Income Spent on Housing
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+housing.burden.chart
+```
+
+:::
+::::::::::::::
+
+
+# Travel to Work
+
+
+## Vehicle Availability
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+vehicles.chart
+```
+
+:::
+::::::::::::::
+
+
+## Transit Mode to Work
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+transit.chart
+```
+
+:::
+::::::::::::::
+
+
+## Travel Time to Work (minutes)
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+tt.chart
+```
+
+:::
+::::::::::::::
+
+
+## Work from Home (Pre-Pandemic)
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+wfh.chart
+```
+
+:::
+::::::::::::::
+
+
+# Health Outcomes
+
+
+## People without Health Insurance
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+insurance.chart
+```
+
+:::
+::::::::::::::
+
+
+## Life Expectancy
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+life.expectancy.chart
+```
+
+:::
+::::::::::::::
+
+
+## Infant Mortality Rate per 1000 Births
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+infant.mortality.chart
+```
+
+:::
+::::::::::::::
+
+
+## People with a Disability
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, echo=FALSE, fig.height=15, fig.width=20}
+disability.chart
+```
+
+:::
+::::::::::::::
+
+# Questions? \n cpatton@psrc.org
+
