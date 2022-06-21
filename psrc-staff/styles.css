@@ -37,6 +37,12 @@ transitionstyle {
   font-size: 36pt;
 }
 
+contactstyle {
+  color: white;
+  font-weight: bold;
+  font-size: 22pt;
+}
+
 slideheadstyle {
   color: #91268F;
   font-weight: bold;
@@ -62,34 +68,12 @@ sourcestyle {
 
 slides > slide.title-slide hgroup h1 {
   font-weight: bold;
-  font-size: 36pt;
+  font-size: 30pt;
   color:white;
-  text-align: left;
-  position: fixed;
-  bottom: 25%;
-  left: 20%;
+  text-align: center;
 }
 
-slides > slide.title-slide hgroup h2 {
-  font-weight: bold;
-  font-size: 24pt;
-  color:white;
-  text-align: left;
-  position: fixed;
-  bottom: 20%;
-  left: 20%;
-}
-
-slides > slide.title-slide hgroup p {
-  font-weight: bold;
-  font-size: 18pt;
-  color:white;
-  text-align: left;
-  position: fixed;
-  bottom: 15%;
-  left: 20%;
-}
 slides>slide.title-slide {
-    background-image: url('X:/DSA/shiny-uploads/trends/rsc-jul21/images/bellevuelakewashington_3.jpg');
+    background-image: url('images/seattle-night.jpg');
     background-size: 100% 100%;
 }

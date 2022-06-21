@@ -1,0 +1,245 @@
+---
+title: "PSRC Office Search"
+output: 
+  ioslides_presentation: 
+    widescreen: yes
+    css: styles.css
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(sf)
+library(leaflet)
+library(reticulate)
+library(data.table)
+
+psrc.logo <- here('data','psrc-logo.png')
+trends.logo <- here('data','puget-sound-trends.png')
+wgs84 <- 4326
+spn <- 2285 
+
+wrk.dir <- "C:/Users/chelmann/OneDrive - Puget Sound Regional Council/coding/gtfs/combined/"
+service.period <- c("spring")
+
+# Route IDs by Type
+srt_ids <- c('kcm_100340', 'kcm_102638')
+lrt_ids <- c('kcm_100479', 'st_100479', 'st_TLINK')
+crt_ids <- c('st_SNDR_EV','st_SNDR_TL','st_AMTK', 'st_SNDR_S', 'st_SNDR_N')
+brt_ids <- c('ct_701','ct_702','kcm_100512', 'kcm_102548', 'kcm_102576', 'kcm_102581', 'kcm_102615', 'kcm_102619')
+pof_ids <- c('kcm_100336', 'kcm_100337','kt_Ferry', 'kt_Annapolis', 'kt_Kitsap Fast Ferry')
+fry_ids <- c('wsf_128', 'wsf_145', 'wsf_1621', 'wsf_2022', 'wsf_209', 'wsf_37','wsf_47', 'wsf_229',
+             'wsf_2116', 'wsf_2220','wsf_514', 'wsf_73', 'wsf_74', 'wsf_812', 'wsf_920', 'wsf_922')
+
+hct_ids <- c(srt_ids, lrt_ids, crt_ids, brt_ids, pof_ids, fry_ids)
+
+```
+
+
+```{python, include=FALSE}
+
+import pandas as pd
+import transit_service_analyst as tsa
+exit
+working_directory = 'C:/Users/chelmann/OneDrive - Puget Sound Regional Council/coding/gtfs/combined/'
+list_of_years = [('2022','20220330')]
+
+list_of_hct = r.hct_ids
+
+current  = 0
+for years in list_of_years:
+  path = working_directory + years[0] + '/spring/'
+  transit_analyst = tsa.load_gtfs(path, years[1])
+  
+  # Get Stops that serve High Capacity Transit Routes
+  temp = transit_analyst.get_tph_by_line()
+  temp = temp[temp['route_id'].isin(list_of_hct)]
+  
+  route_stops = pd.DataFrame(transit_analyst.get_line_stops_gdf().drop(columns='geometry'))
+  route_stops = route_stops[route_stops['rep_trip_id'].isin(temp['rep_trip_id'])]
+  unique_stops = route_stops[route_stops['stop_id'].isin(transit_analyst.stops['stop_id'])]
+  unique_stops['Year'] = years[0]
+  
+  if current==0:
+    hct_by_route = unique_stops
+  else:
+    hct_by_route = pd.concat([hct_by_route, unique_stops], ignore_index=True, sort=False)
+    
+  # Get Route Details for further cleanup before final analysis
+  temp = transit_analyst.routes[['agency_id','route_id','route_short_name','route_long_name','route_type']]
+  temp['Year'] = years[0]
+  
+  if current==0:
+    routes = temp
+  else:
+    routes = pd.concat([routes, temp], ignore_index=True, sort=False)
+    
+  current = current + 1
+  
+# end of loop
+exit
+```
+
+```{r route-stops-cleanup, include=FALSE}
+
+stops <- as_tibble(fread(paste0(wrk.dir,"2022/spring/stops.txt"))) %>% 
+  select(stop_id,stop_lat,stop_lon)
+
+stops.layer <- st_as_sf(stops, coords = c("stop_lon","stop_lat"), crs = wgs84)
+
+hct.route.stops <- as_tibble(py$hct_by_route) %>% 
+  select(stop_id, route_id, Year) %>% 
+  distinct() %>%
+  mutate(Type = case_when(
+    route_id %in% srt_ids ~ "Streetcar",
+    route_id %in% lrt_ids ~ "Light Rail",
+    route_id %in% crt_ids ~ "Commuter Rail",
+    route_id %in% brt_ids ~ "Bus Rapid Transit",
+    route_id %in% pof_ids ~ "Ferry",
+    route_id %in% fry_ids ~ "Ferry"))
+
+hct.stops <- hct.route.stops %>% select(stop_id) %>% pull() %>% unique()
+hct.stops.layer <- stops.layer %>% filter(stop_id %in% hct.stops)
+hct.stops.layer <- left_join(hct.stops.layer, hct.route.stops, by=c("stop_id"))
+
+```
+
+```{r map-creation, include=FALSE}
+psrc.zipcodes <- st_read(here('data', 'psrc_zipcodes.shp')) %>% st_transform(wgs84) %>% select(zipcode)
+psrc.zipcodes.centroids <- psrc.zipcodes %>% st_transform(spn) %>% st_centroid() %>% st_transform(wgs84)
+
+zipcode.data <- read_csv(here('data', 'staff-zipcodes.csv')) %>% mutate(response=1, Zip=as.character(Zip)) 
+zipcode.point.response <- left_join(psrc.zipcodes.centroids, zipcode.data, by=c("zipcode"="Zip")) %>% drop_na()
+
+building.data <- read_csv(here('data', 'buildings.csv'))
+building.data <- st_as_sf(building.data, coords = c("Lon","Lat"))
+
+i <- awesomeIcons(icon = 'user',iconColor = 'black',library = 'fa')
+
+# Building Layer
+getColor <- function(building.data) {
+  sapply(building.data$Code, function(Code) {
+  if(Code == 0) {
+    "blue"
+  } else if(Code == 1) {
+    "red"
+  } else {
+    "green"
+  } })
+}
+
+o <- awesomeIcons(icon = 'building',iconColor = 'black', library = 'fa', markerColor = getColor(building.data))
+
+routeCol <- colorFactor(palette = 'RdYlGn', hct.stops.layer$Type)
+
+m <- leaflet() %>% 
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        
+        addLayersControl(baseGroups = c("Base Map"),
+                         overlayGroups = c("Zipcode","Responses","Transit Stops"),
+                         options = layersControlOptions(collapsed = TRUE)) %>%
+        
+        addEasyButton(easyButton(
+            icon="fa-globe", title="Region",
+            onClick=JS("function(btn, map){map.setView([47.615,-122.257],8.5); }"))) %>%
+        
+        addPolygons(data=psrc.zipcodes,
+                    fillOpacity = 0.0,
+                    opacity = 1.0,
+                    weight = 1,
+                    color = "#91268F",
+                    dashArray = "1",
+                    group = "Zipcode") %>%
+        
+        addAwesomeMarkers(data=zipcode.point.response, 
+                          icon = i, 
+                          clusterOptions = markerClusterOptions(),
+                          group="Responses") %>%
+  
+        addCircles(data=hct.stops.layer, 
+                          group="Transit Stops",
+                          color = ~routeCol(Type),
+                          label= ~as.character(Type)) %>%
+  
+        addLegend(pal = routeCol,
+                  values = hct.stops.layer$Type,
+                  group = "Transit Stops",
+                  position = "bottomleft",
+                  title = "HCT Transit Stops") %>%
+  
+        hideGroup("Transit Stops")
+
+b <- leaflet() %>% 
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        
+        addLayersControl(baseGroups = c("Base Map"),
+                         overlayGroups = c("Buildings","Transit Stops"),
+                         options = layersControlOptions(collapsed = TRUE)) %>%
+        
+        addEasyButton(easyButton(
+            icon="fa-building", title="Office Building Locations",
+            onClick=JS("function(btn, map){map.setView([47.606327,-122.334673],15); }"))) %>%
+  
+        setView(lat=47.606327, lng=-122.334673, zoom=15) %>%
+  
+        addAwesomeMarkers(data=building.data, 
+                          icon = o, 
+                          group="Buildings",
+                          label=~as.character(Building)) %>%
+  
+        addCircles(data=hct.stops.layer, 
+                          group="Transit Stops",
+                          color = ~routeCol(Type),
+                          label= ~as.character(Type)) %>%
+  
+        addLegend(pal = routeCol,
+                  values = hct.stops.layer$Type,
+                  group = "Transit Stops",
+                  position = "bottomleft",
+                  title = "HCT Transit Stops")
+
+```
+
+
+## Home{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Home Zipcode Locations</slideheadstyle>
+</div>
+
+<div style="float: left; width: 25%;">
+* 63 total staff in this summary
+* Staff are located in 3 out of 4 PSRC counties
+* 3 staff are currently located in Kitsap County and are ferry dependent for in-person events
+* 6 staff members live in Snohomish County
+</div> 
+
+<div style="float: right; width: 75%;">
+`r m`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+
+
+## Office{.slide_body_text_sm}
+<div style="position:absolute; top:5%; left:5%;">
+<slideheadstyle>Office Search Locations</slideheadstyle>
+</div>
+
+<div style="float: left; width: 25%;">
+* Explored 10 buildings in the Seattle Central Business District
+* All locations are within a few blocks of High-Capacity Transit
+</div> 
+
+<div style="float: right; width: 75%;">
+`r b`
+</div> 
+
+<IMG style="position:absolute; bottom:2.5%; left:5%; width:192px; "SRC="`r psrc.logo`">
+
+
+## Questions {data-background=images/rhs-slide-2400x800.jpg data-background-size=cover}
+
+<div style="position:absolute; top:80%; left:5%;">
+<transitionstyle>Questions? <br></transitionstyle>
+<contactstyle>NBGrennan@psrc.org or CHelmann@psrc.org</contactstyle>
+</div>
