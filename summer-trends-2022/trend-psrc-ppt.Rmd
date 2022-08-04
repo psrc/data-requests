@@ -1,0 +1,294 @@
+---
+title: "Puget Sound Trends"
+author: "Growth Management Policy Board"
+date: "September 2022"
+output: 
+  powerpoint_presentation:
+    reference_doc: trends-psrc-template.pptx
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+
+library(knitr)
+
+knitr::opts_chunk$set(echo=FALSE, cache = TRUE, warning = FALSE, message = FALSE)
+
+setwd("C:/Users/chelmann/OneDrive - Puget Sound Regional Council/coding/data-requests/summer-trends-2022")
+psrc.logo <- "images/psrc_logo.png"
+
+source("data-processing.R")
+
+install_psrc_fonts()
+
+```
+
+## Population
+![](images/slide-uw-equity_0.png)
+
+## Annual Change: 2013 to 2022 
+
+:::::::::::::: {.columns}
+::: {.column}
+Title Test  
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+population.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Incorporated Area Growth: 2013 to 2022 
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+incorporated.population.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Growth by Regional Geography: 2013 to 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=15}
+pop.rgeo.chart.ten + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Growth by Regional Geography: 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=15}
+pop.rgeo.chart.22 + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Growth by Type of Change: 2013 to 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+population.type.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Housing Units
+![](images/housing.jpg)
+
+## Annual Change: 2013 to 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+housing.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Incorporated Area Growth: 2013 to 2022 
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+incorporated.housing.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Growth by Regional Geography: 2013 to 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=15}
+housing.rgeo.chart.ten + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Growth by Regional Geography: 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=15}
+housing.rgeo.chart.22 + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Growth by Housing Type: 2013 to 2022
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+housing.type.change.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+
+## Air Travel
+![](images/seatac-airport.jpg)
+
+## Weekly Passenger Screenings
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+seatac.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Monthly Air Cargo
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+seatac.aircargo.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Employment Trends
+![](images/rentonboeing3.jpg)
+
+## Regional Jobs
+
+:::::::::::::: {.columns}
+::: {.column}
+
+- xxx
+
+- xxx
+
+:::
+::: {.column}
+
+```{r, fig.height=15, fig.width=20}
+total.jobs.chart + psrcplot::psrc_style() + theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
+```
+
+:::
+::::::::::::::
+
+## Questions? \n chelmann@psrc.org
+![](images/rhs-slide-2400x800.jpg)
+

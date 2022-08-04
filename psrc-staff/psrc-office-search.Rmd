@@ -120,9 +120,9 @@ i <- awesomeIcons(icon = 'user',iconColor = 'black',library = 'fa')
 getColor <- function(building.data) {
   sapply(building.data$Code, function(Code) {
   if(Code == 0) {
-    "blue"
+    "orange"
   } else if(Code == 1) {
-    "red"
+    "blue"
   } else {
     "green"
   } })
