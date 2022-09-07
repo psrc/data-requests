@@ -21,7 +21,7 @@ library(stringr)
 library(tidyr)
 library(forcats)
 
-Sys.setenv("CENSUS_API_KEY"='c4780eb03010d73b7ae4e6894c1592375e545a21')
+
 Sys.getenv("CENSUS_API_KEY")
 install_psrc_fonts()
 
@@ -106,6 +106,6 @@ renton_rgc_mode_share2<-renton_rgc_mode_share_1%>%group_by(Mode)%>%summarize(est
 
 
 ```{r}
-create_bar_chart(renton_rgc_mode_share2,w.x='Mode', w.y='share', f='Mode', w.moe='moe_share')
+create_column_chart(renton_rgc_mode_share2,w.x='Mode', w.y='share', f='Mode', w.moe='moe_share')
 ```
 
