@@ -1,0 +1,111 @@
+---
+title: "commute_mode_share_acs"
+author: "suzanne"
+date: "2022-09-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load_libraries}
+library(sf)
+library(dplyr)
+library(psrccensus)
+library(psrcplot)
+library(tidycensus)
+library(ggplot2)
+library(stringr)
+library(tidyr)
+library(forcats)
+
+Sys.setenv("CENSUS_API_KEY"='c4780eb03010d73b7ae4e6894c1592375e545a21')
+Sys.getenv("CENSUS_API_KEY")
+install_psrc_fonts()
+
+```
+
+
+```{r}
+var_list<- load_variables(2020, "acs5", cache = TRUE)
+```
+
+
+
+```{r}
+mode_bg<- get_acs_recs(geography = 'block group',
+            counties=c("King"),
+             table.names = c('B08301'),
+             years=c(2020),
+             acs.type = 'acs5')
+```
+
+
+
+```{r}
+block_grp_rgc<-read.csv('J:/Projects/Crosswalks/HCT_Centers/Block_Groups_2020.csv')
+
+```
+
+
+
+```{r}
+mode_center <- merge(mode_bg, blocks_rgc, by='GEOID')
+```
+
+
+```{r}
+renton_mode<-mode_center%>%filter(Center_Name=='Renton')
+```
+
+```{r}
+renton_rgc_mode<-renton_mode%>%group_by(label)%>%filter(summarize(estimate_total=sum(estimate), estimate_moe=moe_sum(moe, estimate)))
+```
+
+
+```{r}
+tot_renton<-renton_rgc_mode%>%filter(label==	'Estimate!!Total:')%>%select(estimate_total)
+moe_renton<-renton_rgc_mode%>%filter(label=='Estimate!!Total:')%>%select(estimate_moe)
+
+tot_wfh_renton<-renton_rgc_mode%>%filter(label==	'Estimate!!Total:!!Worked from home')%>%select(estimate_total)
+moe_wfh_renton<-renton_rgc_mode%>%filter(label==	'Estimate!!Total:!!Worked from home')%>%select(estimate_moe)
+
+moes<- c(moe_renton[[1]], moe_wfh_renton[[1]])
+tots<- c(tot_renton[[1]], tot_wfh_renton[[1]])
+
+df_moe_tot<- data.frame(tots, moes)
+
+tot_moe<-df_moe_tot%>%mutate(moe_all=moe_sum(moes, tots))
+
+tot_moe_no_wfh=tot_moe$moe_all[[1]]
+
+renton_rgc_mode_share<- renton_rgc_mode%>%
+  mutate(total=tot_renton[[1]]-tot_wfh_renton[[1]],tot_moe=tot_moe_no_wfh)%>%
+  mutate(share=estimate_total/total, moe_share=moe_prop(estimate_total, total, estimate_moe, tot_moe ))%>%filter(label %in% c('Estimate!!Total:!!Bicycle', 'Estimate!!Total:!!Car, truck, or van:!!Carpooled:', 'Estimate!!Total:!!Motorcycle', 	
+'Estimate!!Total:!!Other means',  	
+'Estimate!!Total:!!Public transportation (excluding taxicab):',
+'Estimate!!Total:!!Taxicab',
+'Estimate!!Total:!!Walked','Estimate!!Total:!!Car, truck, or van:!!Drove alone'
+))
+```
+
+
+Aggregate Some categories
+
+```{r}
+renton_rgc_mode_share_1<-renton_rgc_mode_share%>%mutate(mode_simple=if_else(
+                                               label %in% c('Estimate!!Total:!!Bicycle', 'Estimate!!Total:!!Motorcycle', 'Estimate!!Total:!!Other means',  'Estimate!!Total:!!Taxicab'),'Estimate!!Total:!!Other, bicycle, motorcycle, taxi', label))%>%select(mode_simple, total, tot_moe, estimate_total, estimate_moe)%>% separate(mode_simple, c("Type", "Value","Commute_Mode", "SOV_HOV"), "!!") %>%unite(Mode, c("Commute_Mode", "SOV_HOV"), sep=' ', na.rm=TRUE)
+                                               
+
+
+renton_rgc_mode_share2<-renton_rgc_mode_share_1%>%group_by(Mode)%>%summarize(estimate_grp=sum(estimate_total), moe_grp=moe_sum(estimate_moe, estimate_total), all_total=first(total), all_moe=first(tot_moe))%>%
+  mutate(share=estimate_grp/all_total, moe_share=moe_prop(estimate_grp, all_total, moe_grp, all_moe ))
+```
+
+
+```{r}
+create_bar_chart(renton_rgc_mode_share2,w.x='Mode', w.y='share', f='Mode', w.moe='moe_share')
+```
+
