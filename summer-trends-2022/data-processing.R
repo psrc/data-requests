@@ -67,7 +67,8 @@ population.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y="Delta", f="V
                              w.color="psrc_light",
                              w.title="Annual Population Change: 2013 to 2022",
                              w.interactive="no",
-                             est.type = "number")
+                             est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 # Incorporated Area Population Change -------------------------------------
 unincorp <- ofm.pop %>% 
@@ -89,7 +90,8 @@ incorporated.population.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y=
                                             w.title="Annual Population Change: 2013 to 2022",
                                             w.interactive="no",
                                             est.type = "number",
-                                            w.pos="stack")
+                                            w.pos="stack") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 # Regional Geography Population Change ------------------------------------
 tbl <- ofm.pop %>% 
@@ -136,7 +138,8 @@ rm(tbl,metro,core,hct,cities,unincorporated)
 
 # Growth in 2022
 tbl <- ofm.pop.rgeo %>% filter(Year=="2022") %>% mutate(`Regional Geography` = str_replace(`Regional Geography`, "High Capacity Transit Community", "HCT"))
-pop.rgeo.chart.22 <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Population Growth: 2022", est.type = "number") 
+pop.rgeo.chart.22 <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Population Growth: 2022", est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24)) 
 
 # Growth in the last 10 years
 tbl <- ofm.pop.rgeo %>% 
@@ -147,7 +150,8 @@ tbl <- ofm.pop.rgeo %>%
   summarize_all(sum) %>%
   as_tibble()
 
-pop.rgeo.chart.ten <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Population Growth: 2013 to 2022", est.type = "number")
+pop.rgeo.chart.ten <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Population Growth: 2013 to 2022", est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 # OFM Housing Unit Data 1990 to Present -----------------------------------------------------
 ofm.housing <- get_ofm_postcensal_housing()
@@ -163,7 +167,8 @@ housing.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y="Delta", f="Vari
                                             w.color="psrc_dark",
                                             w.title="Annual Housing Unit Change: 2013 to 2022",
                                             w.interactive="no",
-                                            est.type = "number") 
+                                            est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 rm(tbl)
 
@@ -187,7 +192,8 @@ incorporated.housing.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y="De
                                                          w.title="Annual Housing Change: 2013 to 2022",
                                                          w.interactive="no",
                                                          est.type = "number",
-                                                         w.pos="stack")
+                                                         w.pos="stack") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 rm(tbl)
 
@@ -237,7 +243,8 @@ rm(tbl,metro,core,hct,cities,unincorporated)
 
 # Growth in 2022
 tbl <- ofm.housing.rgeo %>% filter(Year=="2022") %>% mutate(`Regional Geography` = str_replace(`Regional Geography`, "High Capacity Transit Community", "HCT"))
-housing.rgeo.chart.22 <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Housing Unit Growth: 2022", est.type = "number")
+housing.rgeo.chart.22 <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Housing Unit Growth: 2022", est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 rm(tbl)
 
 # Growth in the last 10 years
@@ -249,7 +256,8 @@ tbl <- ofm.housing.rgeo %>%
   summarize_all(sum) %>%
   as_tibble()
   
-housing.rgeo.chart.ten <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Housing Unit Growth: 2013 to 2022", est.type = "number")
+housing.rgeo.chart.ten <- create_treemap_chart(t=tbl, w.area = "Delta", w.fill = "Regional Geography", w.title = "Housing Unit Growth: 2013 to 2022", est.type = "number") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 rm(tbl)
 
@@ -280,7 +288,8 @@ housing.type.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y="Delta", f=
                                                          w.title="Annual Population Change: 2013 to 2022",
                                                          w.interactive="no",
                                                          est.type = "number",
-                                                         w.pos="stack")
+                                                         w.pos="stack") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 rm(sf,mf,mh,tbl)
 
@@ -292,7 +301,8 @@ population.type.change.chart <- create_bar_chart(t=tbl, w.x="Year", w.y="Estimat
                                               w.title="Annual Components of Population Change: 2013 to 2022",
                                               w.interactive="no",
                                               est.type = "number",
-                                              w.pos="stack")
+                                              w.pos="stack") + 
+  theme(plot.title = element_text(size=28), axis.text = element_text(size=24), legend.text = element_text(size=24))
 
 rm(tbl)
 
